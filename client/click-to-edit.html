@@ -1,0 +1,1939 @@
+<script src="/html2canvas.min.js" class="cte-ui"></script>
+<!-- Visual Inspector, Screen Capture & Image Annotation (Development Mode) -->
+<style class="cte-ui">
+  #cte-container {
+    position: fixed;
+    bottom: 24px;
+    left: 24px;
+    z-index: 9999999;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    user-select: none;
+    touch-action: none;
+    transition: left 0.3s cubic-bezier(0.16, 1, 0.3, 1), top 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  #cte-container.cte-dragging {
+    transition: none !important;
+  }
+
+  .cte-fab {
+    width: 42px;
+    height: 42px;
+    border-radius: 10px;
+    background: #0f172a;
+    border: 1px solid #334155;
+    color: #f1f5f9;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: grab;
+    box-shadow: 0 8px 24px -4px rgba(0, 0, 0, 0.4);
+    transition: transform 0.1s ease, background 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+  }
+  .cte-fab:hover {
+    background: #1e293b;
+    border-color: #475569;
+    color: #ffffff;
+    box-shadow: 0 12px 28px -4px rgba(0, 0, 0, 0.5);
+  }
+  .cte-fab:active {
+    cursor: grabbing;
+    transform: scale(0.95);
+  }
+  .cte-fab.active {
+    background: #1e293b;
+    border-color: #3b82f6;
+    color: #60a5fa;
+    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.35);
+  }
+
+  .cte-popover {
+    position: absolute;
+    display: none;
+    flex-direction: column;
+    gap: 4px;
+    background: rgba(15, 23, 42, 0.96);
+    backdrop-filter: blur(12px);
+    border: 1px solid #334155;
+    border-radius: 10px;
+    padding: 6px;
+    box-shadow: 0 14px 32px rgba(0, 0, 0, 0.45);
+    min-width: 210px;
+    animation: ctePopoverIn 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+    z-index: 9999999;
+  }
+  .cte-popover.show {
+    display: flex;
+  }
+  @keyframes ctePopoverIn {
+    from { opacity: 0; transform: scale(0.95); }
+    to { opacity: 1; transform: scale(1); }
+  }
+
+  .cte-menu-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: transparent;
+    color: #cbd5e1;
+    border: 1px solid transparent;
+    padding: 8px 10px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    text-align: left;
+    width: 100%;
+    box-sizing: border-box;
+    white-space: nowrap;
+    transition: all 0.12s ease;
+  }
+  .cte-menu-item:hover {
+    background: #1e293b;
+    color: #ffffff;
+  }
+  .cte-menu-item.active {
+    background: #1e293b;
+    color: #60a5fa;
+    border-color: #3b82f6;
+  }
+  .cte-menu-item.cancel {
+    color: #f87171;
+    border-top: 1px solid #334155;
+    margin-top: 2px;
+    padding-top: 7px;
+  }
+  .cte-menu-item.cancel:hover {
+    background: rgba(239, 68, 68, 0.12);
+    color: #ef4444;
+  }
+
+  .cte-kbd {
+    margin-left: auto;
+    font-size: 10px;
+    font-family: monospace;
+    color: #64748b;
+    background: #0f172a;
+    border: 1px solid #334155;
+    border-radius: 3px;
+    padding: 1px 4px;
+  }
+
+  .cte-highlight-box {
+    position: fixed;
+    pointer-events: none;
+    border: 2px solid #3b82f6;
+    background: rgba(59, 130, 246, 0.08);
+    border-radius: 4px;
+    z-index: 9999990;
+    transition: all 0.04s ease-out;
+    display: none;
+  }
+  .cte-highlight-badge {
+    position: absolute;
+    top: -22px;
+    left: 0;
+    background: #0f172a;
+    color: #93c5fd;
+    border: 1px solid #3b82f6;
+    font-size: 11px;
+    font-family: monospace;
+    font-weight: 500;
+    padding: 1px 6px;
+    border-radius: 4px;
+    white-space: nowrap;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+    max-width: 260px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    pointer-events: none;
+  }
+
+  .cte-crop-box {
+    position: fixed;
+    pointer-events: none;
+    border: 2px dashed #3b82f6;
+    background: rgba(59, 130, 246, 0.15);
+    z-index: 9999990;
+    display: none;
+  }
+
+  /* Multi-element Selection Highlight & Badge */
+  .cte-multi-box {
+    position: fixed;
+    pointer-events: none;
+    border: 2px solid #2563eb;
+    background: rgba(37, 99, 235, 0.12);
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.25);
+    border-radius: 6px;
+    z-index: 9999980;
+    transition: all 0.05s ease-out;
+  }
+  .cte-multi-badge {
+    position: absolute;
+    top: -12px;
+    left: -10px;
+    background: #1e3a8a;
+    color: #ffffff;
+    border: 2px solid #60a5fa;
+    font-size: 11px;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    font-weight: 700;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+    pointer-events: none;
+  }
+
+  /* Compact Floating Multi-Select Pill (Bottom-centered) */
+  .cte-multiselect-bar {
+    position: fixed;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(15, 23, 42, 0.94);
+    backdrop-filter: blur(14px);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    border-radius: 9999px;
+    padding: 3px 5px 3px 12px;
+    display: none;
+    align-items: center;
+    gap: 6px;
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.45), 0 0 0 1px rgba(0,0,0,0.2);
+    z-index: 9999995;
+    color: #f1f5f9;
+    animation: ctePillIn 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  @keyframes ctePillIn {
+    from { opacity: 0; transform: translate(-50%, 14px) scale(0.96); }
+    to { opacity: 1; transform: translate(-50%, 0) scale(1); }
+  }
+  .cte-multiselect-bar.show {
+    display: flex;
+  }
+  .cte-multi-pill {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    user-select: none;
+    padding-right: 2px;
+  }
+  .cte-multi-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #3b82f6;
+    box-shadow: 0 0 8px #3b82f6;
+    animation: ctePulse 1.5s infinite;
+  }
+  #cte-selected-count {
+    color: #60a5fa;
+    font-size: 14px;
+    font-weight: 700;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    line-height: 1;
+    min-width: 10px;
+    text-align: center;
+  }
+  .cte-multi-divider {
+    width: 1px;
+    height: 14px;
+    background: rgba(255, 255, 255, 0.16);
+    margin: 0 1px;
+  }
+  .cte-multi-done-btn {
+    background: #2563eb;
+    border: 1px solid #3b82f6;
+    color: #ffffff;
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    transition: background 0.12s, transform 0.08s;
+  }
+  .cte-multi-done-btn:hover {
+    background: #1d4ed8;
+  }
+  .cte-multi-done-btn:active {
+    transform: scale(0.94);
+  }
+  .cte-multi-cancel-btn {
+    background: transparent;
+    border: none;
+    color: #94a3b8;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    transition: background 0.12s, color 0.12s;
+  }
+  .cte-multi-cancel-btn:hover {
+    background: rgba(255, 255, 255, 0.12);
+    color: #f1f5f9;
+  }
+
+  /* Multi-targets list in Modal */
+  .cte-multi-targets-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    max-height: 180px;
+    overflow-y: auto;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 8px;
+  }
+  .cte-multi-target-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    padding: 6px 8px;
+    font-size: 11px;
+  }
+  .cte-multi-target-idx {
+    background: #2563eb;
+    color: #ffffff;
+    font-weight: 700;
+    font-size: 10px;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+  .cte-multi-target-content {
+    flex: 1;
+    min-width: 0;
+  }
+  .cte-multi-target-tag {
+    font-family: monospace;
+    font-weight: 600;
+    color: #0369a1;
+  }
+  .cte-multi-target-preview {
+    color: #475569;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .cte-modal-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.6);
+    backdrop-filter: blur(3px);
+    z-index: 9999999;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+  }
+  .cte-modal-backdrop.show {
+    display: flex;
+  }
+
+  .cte-modal {
+    background: #ffffff;
+    border-radius: 12px;
+    box-shadow: 0 20px 45px -10px rgba(15, 23, 42, 0.35);
+    width: 100%;
+    max-width: 520px;
+    overflow: hidden;
+    border: 1px solid #cbd5e1;
+    animation: cteModalIn 0.16s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  @keyframes cteModalIn {
+    from { opacity: 0; transform: scale(0.97) translateY(6px); }
+    to { opacity: 1; transform: scale(1); }
+  }
+
+  .cte-modal-header {
+    background: #f8fafc;
+    border-bottom: 1px solid #e2e8f0;
+    padding: 12px 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .cte-modal-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: #0f172a;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .cte-modal-close {
+    background: transparent;
+    border: none;
+    color: #64748b;
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .cte-modal-close:hover {
+    color: #0f172a;
+    background: #e2e8f0;
+  }
+
+  .cte-modal-body {
+    padding: 14px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    max-height: 75vh;
+    overflow-y: auto;
+  }
+  .cte-meta-box {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    padding: 8px 10px;
+    font-size: 12px;
+  }
+  .cte-meta-row {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    margin-bottom: 4px;
+  }
+  .cte-meta-label {
+    font-weight: 600;
+    color: #64748b;
+    font-size: 11px;
+    min-width: 55px;
+  }
+  .cte-meta-value {
+    font-family: monospace;
+    font-size: 11px;
+    color: #0369a1;
+    word-break: break-all;
+  }
+
+  /* Image preview wrapper with draw hint */
+  .cte-image-preview-box {
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    background: #f1f5f9;
+    padding: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    max-height: 220px;
+    overflow: hidden;
+    position: relative;
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+  .cte-image-preview-box:hover {
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+  }
+  .cte-image-preview-box img {
+    max-width: 100%;
+    max-height: 200px;
+    object-fit: contain;
+    border-radius: 4px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+  }
+
+  .cte-annot-badge {
+    position: absolute;
+    bottom: 10px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(15, 23, 42, 0.88);
+    backdrop-filter: blur(6px);
+    color: #ffffff;
+    font-size: 11px;
+    font-weight: 500;
+    padding: 4px 10px;
+    border-radius: 9999px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    pointer-events: none;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    transition: background 0.15s;
+    white-space: nowrap;
+  }
+  .cte-image-preview-box:hover .cte-annot-badge {
+    background: #2563eb;
+    border-color: #3b82f6;
+  }
+
+  .cte-textarea {
+    width: 100%;
+    min-height: 85px;
+    padding: 8px 10px;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    font-size: 13px;
+    font-family: inherit;
+    color: #0f172a;
+    outline: none;
+    box-sizing: border-box;
+    transition: border-color 0.15s;
+    resize: vertical;
+  }
+  .cte-textarea:focus {
+    border-color: #2563eb;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+  }
+
+  .cte-modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 16px;
+    background: #f8fafc;
+    border-top: 1px solid #e2e8f0;
+  }
+  .cte-btn-cancel {
+    background: #ffffff;
+    border: 1px solid #cbd5e1;
+    color: #475569;
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+  }
+  .cte-btn-cancel:hover {
+    background: #f1f5f9;
+  }
+  .cte-btn-submit {
+    background: #0f172a;
+    border: 1px solid #0f172a;
+    color: #ffffff;
+    padding: 6px 14px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .cte-btn-submit:hover {
+    background: #1e293b;
+  }
+
+  /* Annotation / Drawing Canvas Modal Styles */
+  .cte-annot-modal {
+    background: #ffffff;
+    border-radius: 12px;
+    box-shadow: 0 25px 50px -12px rgba(15, 23, 42, 0.4);
+    width: 95vw;
+    max-width: 960px;
+    max-height: 92vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    border: 1px solid #cbd5e1;
+    animation: cteModalIn 0.16s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .cte-annot-header {
+    background: #f8fafc;
+    border-bottom: 1px solid #e2e8f0;
+    padding: 10px 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  .cte-annot-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  .cte-annot-colors {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .cte-color-btn {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    border: 2px solid transparent;
+    cursor: pointer;
+    box-sizing: border-box;
+    transition: transform 0.1s, box-shadow 0.1s;
+  }
+  .cte-color-btn:hover {
+    transform: scale(1.15);
+  }
+  .cte-color-btn.active {
+    box-shadow: 0 0 0 2px #0f172a, 0 0 0 4px #3b82f6;
+    transform: scale(1.15);
+  }
+  .cte-annot-sizes {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    background: #e2e8f0;
+    padding: 2px;
+    border-radius: 6px;
+  }
+  .cte-size-btn {
+    background: transparent;
+    border: none;
+    font-size: 11px;
+    font-weight: 600;
+    color: #475569;
+    padding: 3px 8px;
+    border-radius: 4px;
+    cursor: pointer;
+  }
+  .cte-size-btn.active {
+    background: #ffffff;
+    color: #0f172a;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  }
+  .cte-annot-action-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    background: #f1f5f9;
+    border: 1px solid #cbd5e1;
+    color: #334155;
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 500;
+    cursor: pointer;
+  }
+  .cte-annot-action-btn:hover {
+    background: #e2e8f0;
+    color: #0f172a;
+  }
+  .cte-annot-body {
+    flex: 1;
+    background: #0f172a;
+    padding: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: auto;
+    max-height: 68vh;
+  }
+  #cte-annot-canvas {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+    cursor: crosshair;
+    border-radius: 4px;
+    box-shadow: 0 8px 30px rgba(0,0,0,0.5);
+    background: #ffffff;
+    touch-action: none;
+  }
+
+  .cte-toast {
+    position: fixed;
+    top: 24px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #0f172a;
+    color: #ffffff;
+    padding: 8px 16px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 500;
+    box-shadow: 0 8px 20px rgba(0,0,0,0.25);
+    z-index: 99999999;
+    display: none;
+    border: 1px solid #334155;
+  }
+</style>
+
+<div id="cte-container" class="cte-ui">
+  <!-- Popover Menu with 3 Modes -->
+  <div id="cte-popover" class="cte-popover cte-ui">
+    <button type="button" id="cte-opt-click" class="cte-menu-item cte-ui">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/><line x1="12" y1="2" x2="12" y2="6"/><line x1="12" y1="18" x2="12" y2="22"/><line x1="2" y1="12" x2="6" y2="12"/><line x1="18" y1="12" x2="22" y2="12"/></svg>
+      <span>คลิกเลือก Element</span>
+      <span class="cte-kbd">1</span>
+    </button>
+    <button type="button" id="cte-opt-crop" class="cte-menu-item cte-ui">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2v14a2 2 0 0 0 2 2h14"/><path d="M18 22V8a2 2 0 0 0-2-2H2"/></svg>
+      <span>ลากครอบพื้นที่</span>
+      <span class="cte-kbd">2</span>
+    </button>
+    <button type="button" id="cte-opt-capture" class="cte-menu-item cte-ui">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+      <span>ลากครอบแคปภาพ</span>
+      <span class="cte-kbd">3</span>
+    </button>
+    <button type="button" id="cte-opt-cancel" class="cte-menu-item cancel cte-ui">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      <span>ปิด</span>
+      <span class="cte-kbd">ESC</span>
+    </button>
+  </div>
+
+  <!-- Draggable Floating Icon Button -->
+  <div id="cte-fab" class="cte-fab cte-ui" title="เครื่องมือแก้ไข UI (กด 1 เลือก Element, 2 ครอบพื้นที่, 3 แคปภาพ หรือกด ESC เพื่อเปิด/ปิดเมนู)">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="12" r="10"/>
+      <line x1="12" y1="8" x2="12" y2="12"/>
+      <line x1="12" y1="16" x2="12.01" y2="16"/>
+    </svg>
+  </div>
+</div>
+
+<!-- Floating Compact Multi-Select Pill (Bottom-centered) -->
+<div id="cte-multiselect-bar" class="cte-multiselect-bar cte-ui">
+  <div class="cte-multi-pill cte-ui">
+    <span class="cte-multi-dot cte-ui"></span>
+    <strong id="cte-selected-count" class="cte-ui">0</strong>
+  </div>
+  <div class="cte-multi-divider cte-ui"></div>
+  <button type="button" id="cte-multi-done-btn" class="cte-multi-done-btn cte-ui" title="เสร็จสิ้นการเลือก (Enter)">
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+  </button>
+  <button type="button" id="cte-multi-cancel-btn" class="cte-multi-cancel-btn cte-ui" title="ยกเลิก (ESC)">
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+  </button>
+</div>
+
+<!-- Highlight & Crop Overlays -->
+<div id="cte-highlight-box" class="cte-highlight-box cte-ui">
+  <div id="cte-highlight-badge" class="cte-highlight-badge cte-ui"></div>
+</div>
+<div id="cte-crop-box" class="cte-crop-box cte-ui"></div>
+
+<!-- Main Edit Instruction Modal -->
+<div id="cte-modal-backdrop" class="cte-modal-backdrop cte-ui">
+  <div class="cte-modal cte-ui">
+    <div class="cte-modal-header cte-ui">
+      <div class="cte-modal-title cte-ui">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+        <span id="cte-modal-heading">ระบุคำสั่งแก้ไขสำหรับจุดนี้</span>
+      </div>
+      <button type="button" class="cte-modal-close cte-ui" id="cte-modal-close-btn" aria-label="Close">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="cte-modal-body cte-ui">
+      <!-- Image preview (clickable to open annotation drawing) -->
+      <div id="cte-image-preview-wrap" class="cte-image-preview-box cte-ui" style="display:none;">
+        <img id="cte-image-preview" src="" alt="Screenshot Preview" class="cte-ui"/>
+        <div class="cte-annot-badge cte-ui">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+          <span>คลิกที่ภาพเพื่อขยายและวาดปากกา</span>
+        </div>
+      </div>
+
+      <!-- Multiple selected targets list -->
+      <div id="cte-multi-targets-wrap" class="cte-multi-targets-list cte-ui" style="display:none;"></div>
+
+      <!-- Metadata box (if element or area selected) -->
+      <div class="cte-meta-box cte-ui" id="cte-meta-box">
+        <div class="cte-meta-row cte-ui">
+          <span class="cte-meta-label cte-ui">Element:</span>
+          <span class="cte-meta-value cte-ui" id="cte-target-type">-</span>
+        </div>
+        <div class="cte-meta-row cte-ui">
+          <span class="cte-meta-label cte-ui">Selector:</span>
+          <span class="cte-meta-value cte-ui" id="cte-target-selector">-</span>
+        </div>
+        <div class="cte-meta-row cte-ui" style="margin-bottom:0;">
+          <span class="cte-meta-label cte-ui">Content:</span>
+          <span class="cte-meta-value cte-ui" id="cte-target-preview">-</span>
+        </div>
+      </div>
+      <textarea id="cte-instruction-input" class="cte-textarea cte-ui" placeholder="ระบุสิ่งที่ต้องการปรับปรุง เช่น ปรับขนาดฟอนต์, เปลี่ยนข้อความ, จัดแนว, เปลี่ยนสี ฯลฯ (กด Enter เพื่อส่งคำสั่ง, Shift+Enter เพื่อขึ้นบรรทัดใหม่)"></textarea>
+    </div>
+    <div class="cte-modal-footer cte-ui">
+      <button type="button" class="cte-btn-cancel cte-ui" id="cte-modal-cancel">ยกเลิก</button>
+      <button type="button" class="cte-btn-submit cte-ui" id="cte-modal-send">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+        <span id="cte-submit-btn-text">บันทึกและคัดลอกคำสั่ง</span>
+        <span class="cte-kbd" style="margin-left:4px; font-size:10px; opacity:0.85; background:rgba(255,255,255,0.18); color:#fff; border:1px solid rgba(255,255,255,0.3); padding:1px 5px; border-radius:4px;">Enter ↵</span>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Annotation & Drawing Canvas Modal -->
+<div id="cte-annot-modal-backdrop" class="cte-modal-backdrop cte-ui" style="z-index:99999999;">
+  <div class="cte-annot-modal cte-ui">
+    <div class="cte-annot-header cte-ui">
+      <div class="cte-modal-title cte-ui">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+        <span>วาดวงหรือเขียนเน้นจุดบนภาพ</span>
+      </div>
+      <div class="cte-annot-toolbar cte-ui">
+        <!-- Colors -->
+        <div class="cte-annot-colors cte-ui">
+          <button type="button" class="cte-color-btn active cte-ui" data-color="#ef4444" style="background:#ef4444;"></button>
+          <button type="button" class="cte-color-btn cte-ui" data-color="#3b82f6" style="background:#3b82f6;"></button>
+          <button type="button" class="cte-color-btn cte-ui" data-color="#eab308" style="background:#eab308;"></button>
+          <button type="button" class="cte-color-btn cte-ui" data-color="#10b981" style="background:#10b981;"></button>
+          <button type="button" class="cte-color-btn cte-ui" data-color="#ffffff" style="background:#ffffff;border:1px solid #94a3b8;"></button>
+        </div>
+        <!-- Stroke sizes -->
+        <div class="cte-annot-sizes cte-ui">
+          <button type="button" class="cte-size-btn cte-ui" data-size="2">2px</button>
+          <button type="button" class="cte-size-btn active cte-ui" data-size="4">4px</button>
+          <button type="button" class="cte-size-btn cte-ui" data-size="8">8px</button>
+        </div>
+        <!-- Undo & Clear -->
+        <button type="button" class="cte-annot-action-btn cte-ui" id="cte-annot-undo">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7v6h6"/><path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13"/></svg>
+          <span>ย้อนกลับ</span>
+        </button>
+        <button type="button" class="cte-annot-action-btn cte-ui" id="cte-annot-clear">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/></svg>
+          <span>ล้างรูปวาด</span>
+        </button>
+      </div>
+      <button type="button" class="cte-modal-close cte-ui" id="cte-annot-close-btn" aria-label="Close">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="cte-annot-body cte-ui">
+      <canvas id="cte-annot-canvas" class="cte-ui"></canvas>
+    </div>
+    <div class="cte-modal-footer cte-ui">
+      <button type="button" class="cte-btn-cancel cte-ui" id="cte-annot-cancel">ยกเลิก</button>
+      <button type="button" class="cte-btn-submit cte-ui" id="cte-annot-save">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+        <span>เสร็จสิ้น</span>
+        <span class="cte-kbd" style="margin-left:4px; font-size:10px; opacity:0.85; background:rgba(255,255,255,0.18); color:#fff; border:1px solid rgba(255,255,255,0.3); padding:1px 5px; border-radius:4px;">Enter ↵</span>
+      </button>
+    </div>
+  </div>
+</div>
+
+<div id="cte-toast" class="cte-toast cte-ui"></div>
+
+<script class="cte-ui">
+(function() {
+  if (window.__CTE_INITIALIZED__) return;
+  window.__CTE_INITIALIZED__ = true;
+
+  const container = document.getElementById('cte-container');
+  const fab = document.getElementById('cte-fab');
+  const popover = document.getElementById('cte-popover');
+  const optClick = document.getElementById('cte-opt-click');
+  const optCrop = document.getElementById('cte-opt-crop');
+  const optCapture = document.getElementById('cte-opt-capture');
+  const optCancel = document.getElementById('cte-opt-cancel');
+  const highlightBox = document.getElementById('cte-highlight-box');
+  const highlightBadge = document.getElementById('cte-highlight-badge');
+  const cropBox = document.getElementById('cte-crop-box');
+
+  const modalBackdrop = document.getElementById('cte-modal-backdrop');
+  const modalCloseBtn = document.getElementById('cte-modal-close-btn');
+  const modalCancelBtn = document.getElementById('cte-modal-cancel');
+  const modalSendBtn = document.getElementById('cte-modal-send');
+  const modalHeading = document.getElementById('cte-modal-heading');
+  const submitBtnText = document.getElementById('cte-submit-btn-text');
+  const instructionInput = document.getElementById('cte-instruction-input');
+  const metaBox = document.getElementById('cte-meta-box');
+  const multiTargetsWrap = document.getElementById('cte-multi-targets-wrap');
+  const multiSelectBar = document.getElementById('cte-multiselect-bar');
+  const selectedCountEl = document.getElementById('cte-selected-count');
+  const multiDoneBtn = document.getElementById('cte-multi-done-btn');
+  const multiCancelBtn = document.getElementById('cte-multi-cancel-btn');
+  const imagePreviewWrap = document.getElementById('cte-image-preview-wrap');
+  const imagePreview = document.getElementById('cte-image-preview');
+  const targetTypeEl = document.getElementById('cte-target-type');
+  const targetSelectorEl = document.getElementById('cte-target-selector');
+  const targetPreviewEl = document.getElementById('cte-target-preview');
+  const toast = document.getElementById('cte-toast');
+
+  // Annotation Editor Elements
+  const annotModalBackdrop = document.getElementById('cte-annot-modal-backdrop');
+  const annotCanvas = document.getElementById('cte-annot-canvas');
+  const annotCtx = annotCanvas.getContext('2d');
+  const annotUndoBtn = document.getElementById('cte-annot-undo');
+  const annotClearBtn = document.getElementById('cte-annot-clear');
+  const annotCancelBtn = document.getElementById('cte-annot-cancel');
+  const annotCloseBtn = document.getElementById('cte-annot-close-btn');
+  const annotSaveBtn = document.getElementById('cte-annot-save');
+  const colorBtns = document.querySelectorAll('.cte-color-btn');
+  const sizeBtns = document.querySelectorAll('.cte-size-btn');
+
+  let isInspectMode = false;
+  let currentMode = null; // 'click' | 'crop' | 'capture'
+  let capturedData = null;
+  let capturedBlob = null;
+  let capturedBase64 = null;
+  let isAreaMouseDown = false;
+  let cropStartX = 0, cropStartY = 0;
+
+  // Drawing state
+  let drawColor = '#ef4444';
+  let drawSize = 4;
+  let isDrawing = false;
+  let lastDrawX = 0, lastDrawY = 0;
+  let undoStack = [];
+  const maxUndo = 15;
+
+  const PADDING = 12;
+
+  // Suppress any global tooltip system over CTE
+  container.addEventListener('mouseenter', () => {
+    if (typeof Tooltip !== 'undefined' && typeof Tooltip.hide === 'function') {
+      Tooltip.hide();
+    }
+  });
+
+  // --- SMART POPOVER POSITIONING ---
+  function updatePopoverPosition() {
+    const rect = container.getBoundingClientRect();
+    const popoverWidth = 210;
+    const popoverHeight = 175;
+
+    if (rect.left + popoverWidth > window.innerWidth - PADDING) {
+      popover.style.left = 'auto';
+      popover.style.right = '0px';
+    } else {
+      popover.style.right = 'auto';
+      popover.style.left = '0px';
+    }
+
+    if (rect.top - popoverHeight < PADDING) {
+      popover.style.bottom = 'auto';
+      popover.style.top = '48px';
+    } else {
+      popover.style.top = 'auto';
+      popover.style.bottom = '48px';
+    }
+  }
+
+  // --- DRAG LOGIC FOR FAB ---
+  let isDraggingFab = false;
+  let hasMoved = false;
+  let suppressNextClick = false;
+  let dragStartX = 0, dragStartY = 0;
+  let initialLeft = 0, initialTop = 0;
+
+  function clampPosition(left, top) {
+    const maxLeft = window.innerWidth - 42 - PADDING;
+    const maxTop = window.innerHeight - 42 - PADDING;
+    return {
+      x: Math.max(PADDING, Math.min(left, maxLeft)),
+      y: Math.max(PADDING, Math.min(top, maxTop))
+    };
+  }
+
+  fab.addEventListener('pointerdown', (e) => {
+    if (e.button !== 0) return;
+    isDraggingFab = true;
+    hasMoved = false;
+    dragStartX = e.clientX;
+    dragStartY = e.clientY;
+
+    container.classList.add('cte-dragging');
+
+    const rect = container.getBoundingClientRect();
+    initialLeft = rect.left;
+    initialTop = rect.top;
+
+    container.style.bottom = 'auto';
+    container.style.right = 'auto';
+    container.style.left = initialLeft + 'px';
+    container.style.top = initialTop + 'px';
+
+    fab.setPointerCapture(e.pointerId);
+  });
+
+  fab.addEventListener('pointermove', (e) => {
+    if (!isDraggingFab) return;
+    const dx = e.clientX - dragStartX;
+    const dy = e.clientY - dragStartY;
+
+    if (Math.abs(dx) > 3 || Math.abs(dy) > 3) {
+      hasMoved = true;
+      // Close menu immediately as soon as dragging begins
+      popover.classList.remove('show');
+    }
+
+    if (hasMoved) {
+      const clamped = clampPosition(initialLeft + dx, initialTop + dy);
+      container.style.left = clamped.x + 'px';
+      container.style.top = clamped.y + 'px';
+    }
+  });
+
+  fab.addEventListener('pointerup', (e) => {
+    if (!isDraggingFab) return;
+    isDraggingFab = false;
+    try { fab.releasePointerCapture(e.pointerId); } catch(err) {}
+
+    container.classList.remove('cte-dragging');
+
+    if (hasMoved) {
+      suppressNextClick = true;
+      setTimeout(() => { suppressNextClick = false; }, 150);
+
+      // Snap to nearest of all 4 edges (Left, Right, Top, Bottom)
+      const rect = container.getBoundingClientRect();
+      const currentX = rect.left;
+      const currentY = rect.top;
+
+      const minX = PADDING;
+      const maxX = window.innerWidth - rect.width - PADDING;
+      const minY = PADDING;
+      const maxY = window.innerHeight - rect.height - PADDING;
+
+      const distLeft = Math.abs(currentX - minX);
+      const distRight = Math.abs(maxX - currentX);
+      const distTop = Math.abs(currentY - minY);
+      const distBottom = Math.abs(maxY - currentY);
+
+      const minDist = Math.min(distLeft, distRight, distTop, distBottom);
+
+      let targetLeft = currentX;
+      let targetTop = currentY;
+
+      if (minDist === distLeft) {
+        targetLeft = minX;
+      } else if (minDist === distRight) {
+        targetLeft = maxX;
+      } else if (minDist === distTop) {
+        targetTop = minY;
+      } else {
+        targetTop = maxY;
+      }
+
+      targetLeft = Math.max(minX, Math.min(targetLeft, maxX));
+      targetTop = Math.max(minY, Math.min(targetTop, maxY));
+
+      container.style.left = targetLeft + 'px';
+      container.style.top = targetTop + 'px';
+
+      // Keep menu closed after drag
+      popover.classList.remove('show');
+    } else {
+      if (isInspectMode) {
+        stopInspect();
+      } else {
+        updatePopoverPosition();
+        popover.classList.toggle('show');
+      }
+    }
+  });
+
+  window.addEventListener('resize', () => {
+    const rect = container.getBoundingClientRect();
+    const clamped = clampPosition(rect.left, rect.top);
+    container.style.left = clamped.x + 'px';
+    container.style.top = clamped.y + 'px';
+    updatePopoverPosition();
+  });
+
+  let toastTimer = null;
+  function showToast(msg) {
+    if (toastTimer) clearTimeout(toastTimer);
+    toast.textContent = msg;
+    toast.style.display = 'block';
+    toastTimer = setTimeout(() => { toast.style.display = 'none'; }, 2800);
+  }
+
+  let selectedElements = [];
+
+  function clearMultiBoxes() {
+    document.querySelectorAll('.cte-multi-box').forEach(b => b.remove());
+    selectedElements = [];
+    if (selectedCountEl) selectedCountEl.textContent = '0';
+  }
+
+  function updateMultiBoxPositions() {
+    selectedElements.forEach(item => {
+      if (item.el && item.boxEl) {
+        const rect = item.el.getBoundingClientRect();
+        item.boxEl.style.top = rect.top + 'px';
+        item.boxEl.style.left = rect.left + 'px';
+        item.boxEl.style.width = rect.width + 'px';
+        item.boxEl.style.height = rect.height + 'px';
+      }
+    });
+  }
+  window.addEventListener('scroll', updateMultiBoxPositions, true);
+  window.addEventListener('resize', updateMultiBoxPositions, true);
+
+  function startInspect(mode) {
+    if (document.activeElement && typeof document.activeElement.blur === 'function' && !document.activeElement.closest?.('#cte-container')) {
+      document.activeElement.blur();
+    }
+    currentMode = mode;
+    isInspectMode = true;
+    popover.classList.remove('show');
+    fab.classList.add('active');
+    document.body.style.cursor = 'crosshair';
+
+    optClick.classList.toggle('active', mode === 'click');
+    optCrop.classList.toggle('active', mode === 'crop');
+    optCapture.classList.toggle('active', mode === 'capture');
+
+    if (mode === 'click') {
+      clearMultiBoxes();
+      if (multiSelectBar) multiSelectBar.classList.add('show');
+    } else {
+      if (multiSelectBar) multiSelectBar.classList.remove('show');
+    }
+  }
+
+  function stopInspect() {
+    isInspectMode = false;
+    currentMode = null;
+    fab.classList.remove('active');
+    highlightBox.style.display = 'none';
+    cropBox.style.display = 'none';
+    if (multiSelectBar) multiSelectBar.classList.remove('show');
+    document.body.style.cursor = '';
+    isAreaMouseDown = false;
+    optClick.classList.remove('active');
+    optCrop.classList.remove('active');
+    optCapture.classList.remove('active');
+  }
+
+  function toggleSelectElement(el) {
+    if (!el || el.closest('.cte-ui')) return;
+
+    const existingIdx = selectedElements.findIndex(it => it.el === el);
+    if (existingIdx !== -1) {
+      selectedElements[existingIdx].boxEl.remove();
+      selectedElements.splice(existingIdx, 1);
+      selectedElements.forEach((it, idx) => {
+        it.badgeEl.textContent = idx + 1;
+      });
+      if (selectedCountEl) selectedCountEl.textContent = selectedElements.length;
+      return;
+    }
+
+    const rect = el.getBoundingClientRect();
+    const box = document.createElement('div');
+    box.className = 'cte-multi-box cte-ui';
+    box.style.top = rect.top + 'px';
+    box.style.left = rect.left + 'px';
+    box.style.width = rect.width + 'px';
+    box.style.height = rect.height + 'px';
+
+    const badge = document.createElement('span');
+    badge.className = 'cte-multi-badge cte-ui';
+    badge.textContent = selectedElements.length + 1;
+    box.appendChild(badge);
+
+    document.body.appendChild(box);
+
+    const selector = getSelector(el);
+    const component = getComponentName(el);
+    const textPreview = (el.innerText || '').slice(0, 100).trim();
+
+    selectedElements.push({
+      el: el,
+      boxEl: box,
+      badgeEl: badge,
+      selector: selector,
+      component: component,
+      type: el.tagName.toLowerCase(),
+      preview: textPreview || el.outerHTML.slice(0, 80)
+    });
+
+    if (selectedCountEl) selectedCountEl.textContent = selectedElements.length;
+  }
+
+  function finishMultiSelect() {
+    if (selectedElements.length === 0) {
+      showToast('กรุณาคลิกเลือกอย่างน้อย 1 จุดบนหน้าจอ');
+      return;
+    }
+
+    capturedBlob = null;
+    capturedBase64 = null;
+
+    if (selectedElements.length === 1) {
+      const single = selectedElements[0];
+      capturedData = {
+        isImage: false,
+        isMulti: false,
+        type: `<${single.type}>`,
+        component: single.component || '',
+        selector: single.selector,
+        preview: single.preview
+      };
+    } else {
+      capturedData = {
+        isImage: false,
+        isMulti: true,
+        items: selectedElements.map((it, idx) => ({
+          index: idx + 1,
+          type: it.type,
+          component: it.component || '',
+          selector: it.selector,
+          preview: it.preview
+        })),
+        type: `หลายจุด (${selectedElements.length} จุด)`,
+        selector: selectedElements.map((it, idx) => `[${idx+1}] ${it.selector}`).join('\n'),
+        preview: selectedElements.map((it, idx) => `[${idx+1}] ${it.preview}`).join(' | ')
+      };
+    }
+
+    stopInspect();
+    openModal();
+  }
+
+  if (multiDoneBtn) {
+    multiDoneBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      finishMultiSelect();
+    });
+  }
+
+  if (multiCancelBtn) {
+    multiCancelBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      stopInspect();
+      clearMultiBoxes();
+      showToast('ยกเลิกการเลือกจุด');
+    });
+  }
+
+  optClick.addEventListener('click', (e) => {
+    e.stopPropagation();
+    startInspect('click');
+  });
+
+  optCrop.addEventListener('click', (e) => {
+    e.stopPropagation();
+    startInspect('crop');
+  });
+
+  optCapture.addEventListener('click', (e) => {
+    e.stopPropagation();
+    startInspect('capture');
+  });
+
+  optCancel.addEventListener('click', (e) => {
+    e.stopPropagation();
+    popover.classList.remove('show');
+    stopInspect();
+  });
+
+  function isTypingContext(target) {
+    const el = target || document.activeElement;
+    if (!el) return false;
+    const tag = el.tagName ? el.tagName.toLowerCase() : '';
+    if (tag === 'input' || tag === 'textarea' || tag === 'select') return true;
+    if (el.isContentEditable) return true;
+    if (typeof el.closest === 'function' && el.closest('[contenteditable="true"]')) return true;
+    return false;
+  }
+
+  window.addEventListener('keydown', (e) => {
+    // 1. คีย์ลัด 1, 2, 3 สามารถกดใช้งานได้ทันทีโดยไม่ต้องเปิดเมนูก่อน (และใช้งานในเมนูได้เช่นกัน)
+    const isPopoverOpen = popover.classList.contains('show');
+    const isTyping = !isPopoverOpen && (isTypingContext(e.target) || isTypingContext(document.activeElement));
+    const isModifier = e.ctrlKey || e.altKey || e.metaKey;
+    const isCteModalOpen = modalBackdrop.classList.contains('show') || annotModalBackdrop.classList.contains('show');
+
+    if (!isTyping && !isModifier && !isCteModalOpen && !e.shiftKey) {
+      const isDigit1 = (e.key === '1' || e.code === 'Digit1' || e.code === 'Numpad1');
+      const isDigit2 = (e.key === '2' || e.code === 'Digit2' || e.code === 'Numpad2');
+      const isDigit3 = (e.key === '3' || e.code === 'Digit3' || e.code === 'Numpad3');
+
+      if (isDigit1) {
+        e.preventDefault();
+        if (isInspectMode && currentMode === 'click' && !popover.classList.contains('show')) {
+          stopInspect();
+        } else {
+          startInspect('click');
+        }
+        return;
+      } else if (isDigit2) {
+        e.preventDefault();
+        if (isInspectMode && currentMode === 'crop' && !popover.classList.contains('show')) {
+          stopInspect();
+        } else {
+          startInspect('crop');
+        }
+        return;
+      } else if (isDigit3) {
+        e.preventDefault();
+        if (isInspectMode && currentMode === 'capture' && !popover.classList.contains('show')) {
+          stopInspect();
+        } else {
+          startInspect('capture');
+        }
+        return;
+      }
+    }
+
+    if (e.key === 'Escape') {
+      if (annotModalBackdrop.classList.contains('show')) {
+        e.preventDefault();
+        annotModalBackdrop.classList.remove('show');
+      } else if (modalBackdrop.classList.contains('show')) {
+        e.preventDefault();
+        closeModal();
+      } else if (isInspectMode) {
+        e.preventDefault();
+        stopInspect();
+        clearMultiBoxes();
+        showToast('ยกเลิกการเลือกจุด');
+      } else if (popover.classList.contains('show')) {
+        e.preventDefault();
+        popover.classList.remove('show');
+      } else {
+        // ตรวจสอบว่าหน้าต่าง Modal หรือ Search ของระบบหลักเปิดอยู่หรือไม่
+        const hasAppModal = Boolean(
+          document.getElementById('modal-backdrop') ||
+          document.querySelector('.modal-backdrop:not(.cte-ui)') ||
+          document.querySelector('.needs-drawer.active') ||
+          document.querySelector('.needs-drawer-backdrop.active') ||
+          document.querySelector('.gs-modal.active, .gs-backdrop.active')
+        );
+        if (hasAppModal || e.defaultPrevented) return;
+
+        e.preventDefault();
+        if (document.activeElement && typeof document.activeElement.blur === 'function' && !document.activeElement.closest?.('#cte-container')) {
+          document.activeElement.blur();
+        }
+        updatePopoverPosition();
+        popover.classList.add('show');
+      }
+    } else if (e.key === 'Enter') {
+      if (isInspectMode && currentMode === 'click') {
+        e.preventDefault();
+        finishMultiSelect();
+        return;
+      }
+      if (annotModalBackdrop.classList.contains('show')) {
+        if (e.target === annotCancelBtn || e.target === annotCloseBtn) return;
+        e.preventDefault();
+        annotSaveBtn.click();
+      } else if (modalBackdrop.classList.contains('show')) {
+        if (e.target === modalCancelBtn || e.target === modalCloseBtn) return;
+        if (e.shiftKey) {
+          // Shift+Enter ใน textarea: อนุญาตให้ขึ้นบรรทัดใหม่ตามปกติ
+          return;
+        }
+        e.preventDefault();
+        modalSendBtn.click();
+      }
+    }
+  });
+
+  window.addEventListener('click', (e) => {
+    if (suppressNextClick) {
+      e.stopPropagation();
+      return;
+    }
+    if (!e.target.closest('#cte-container')) {
+      popover.classList.remove('show');
+    }
+  }, true);
+
+  function getComponentName(el) {
+    if (!el || el.nodeType !== Node.ELEMENT_NODE) return '';
+    try {
+      const directAttr = el.getAttribute('data-component') || el.getAttribute('data-testid');
+      if (directAttr) return directAttr;
+
+      // Check React Fiber (React 16-19)
+      let cur = el;
+      for (let depth = 0; cur && depth < 4; depth++, cur = cur.parentElement) {
+        const keys = Object.keys(cur);
+        const fiberKey = keys.find(k => k.startsWith('__reactFiber$') || k.startsWith('__reactInternalInstance$'));
+        if (fiberKey) {
+          let fiber = cur[fiberKey];
+          let hops = 0;
+          while (fiber && hops < 25) {
+            const type = fiber.type;
+            if (type && typeof type !== 'string') {
+              const name = type.displayName || type.name || (type.render && (type.render.displayName || type.render.name));
+              if (name && !/^(Fragment|Suspense|StrictMode|Provider|Consumer|Context|Anonymous|MotionComponent)$/i.test(name) && name.length > 1) {
+                return name;
+              }
+            }
+            fiber = fiber.return;
+            hops++;
+          }
+        }
+        // Check Vue 3 / Vue 2
+        if (cur.__vueParentComponent && cur.__vueParentComponent.type) {
+          const vName = cur.__vueParentComponent.type.name || cur.__vueParentComponent.type.__name;
+          if (vName) return vName;
+        }
+        if (cur.__vue__ && cur.__vue__.$options && cur.__vue__.$options.name) {
+          return cur.__vue__.$options.name;
+        }
+      }
+
+      const attrLabel = el.getAttribute('aria-label');
+      if (attrLabel) return `aria:"${attrLabel.slice(0, 28)}"`;
+    } catch (e) {}
+    return '';
+  }
+
+  function sanitizeCssColors(cssText) {
+    if (!cssText) return cssText;
+    return cssText
+      .replace(/color-mix\([^()]*(?:\([^()]*\)[^()]*)*\)/g, 'rgba(148, 163, 184, 0.35)')
+      .replace(/oklab\([^()]*(?:\([^()]*\)[^()]*)*\)/g, '#0095DA')
+      .replace(/oklch\([^()]*(?:\([^()]*\)[^()]*)*\)/g, '#0095DA')
+      .replace(/\blab\([^()]*(?:\([^()]*\)[^()]*)*\)/g, '#0095DA')
+      .replace(/\blch\([^()]*(?:\([^()]*\)[^()]*)*\)/g, '#0095DA');
+  }
+
+  async function copyTextFallback(text) {
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(text);
+        return true;
+      }
+    } catch (e) {}
+    try {
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      ta.className = 'cte-ui';
+      ta.style.position = 'fixed';
+      ta.style.left = '-9999px';
+      ta.style.top = '0';
+      document.body.appendChild(ta);
+      ta.focus();
+      ta.select();
+      const ok = document.execCommand('copy');
+      ta.remove();
+      return ok;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  async function postToCteServer(endpoint, payload) {
+    const rawBase = typeof window.__CTE_API_BASE__ === 'string'
+      ? window.__CTE_API_BASE__.trim().replace(/\/+$/, '')
+      : '';
+    const urls = [];
+    if (rawBase) {
+      urls.push(rawBase + endpoint);
+    } else {
+      if (window.location && window.location.protocol !== 'file:') {
+        urls.push(endpoint);
+      }
+      const sidecarBase = 'http://localhost:4899';
+      if (!window.location || window.location.origin !== sidecarBase) {
+        urls.push(sidecarBase + endpoint);
+      }
+    }
+
+    for (const url of urls) {
+      try {
+        const res = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        if (res.ok) return true;
+      } catch (e) {}
+    }
+    return false;
+  }
+
+  function getSelector(el) {
+    if (!el || el === document.body) return 'body';
+    if (el.id) return '#' + el.id;
+    let path = [];
+    while (el && el.nodeType === Node.ELEMENT_NODE && el !== document.body) {
+      let selector = el.nodeName.toLowerCase();
+      if (el.className && typeof el.className === 'string') {
+        const classes = el.className.trim().split(/\s+/).filter(c => c && !c.startsWith('cte-')).slice(0, 2);
+        if (classes.length) selector += '.' + classes.join('.');
+      }
+      path.unshift(selector);
+      el = el.parentNode;
+      if (path.length >= 3) break;
+    }
+    return path.join(' > ');
+  }
+
+  // --- MOUSE MOVE ---
+  window.addEventListener('mousemove', (e) => {
+    if (!isInspectMode) return;
+
+    if (currentMode === 'click') {
+      const el = document.elementFromPoint(e.clientX, e.clientY);
+      if (!el || el.closest('.cte-ui')) {
+        highlightBox.style.display = 'none';
+        return;
+      }
+      const rect = el.getBoundingClientRect();
+      highlightBox.style.top = rect.top + 'px';
+      highlightBox.style.left = rect.left + 'px';
+      highlightBox.style.width = rect.width + 'px';
+      highlightBox.style.height = rect.height + 'px';
+      highlightBox.style.display = 'block';
+
+      const tag = el.tagName.toLowerCase();
+      const comp = getComponentName(el);
+      const text = (el.innerText || '').trim().replace(/\s+/g, ' ').slice(0, 24);
+      highlightBadge.textContent = `<${tag}>${comp ? ` [${comp}]` : ''} ${text ? `"${text}"` : ''}`;
+    } else if ((currentMode === 'crop' || currentMode === 'capture') && isAreaMouseDown) {
+      const curX = e.clientX;
+      const curY = e.clientY;
+      const left = Math.min(cropStartX, curX);
+      const top = Math.min(cropStartY, curY);
+      const width = Math.abs(curX - cropStartX);
+      const height = Math.abs(curY - cropStartY);
+
+      cropBox.style.left = left + 'px';
+      cropBox.style.top = top + 'px';
+      cropBox.style.width = width + 'px';
+      cropBox.style.height = height + 'px';
+      cropBox.style.display = 'block';
+    }
+  }, true);
+
+  // --- AREA DRAG START / END ---
+  window.addEventListener('mousedown', (e) => {
+    if (!isInspectMode || (currentMode !== 'crop' && currentMode !== 'capture')) return;
+    if (e.target.closest('.cte-ui')) return;
+    e.preventDefault();
+    e.stopPropagation();
+    isAreaMouseDown = true;
+    cropStartX = e.clientX;
+    cropStartY = e.clientY;
+  }, true);
+
+  window.addEventListener('mouseup', async (e) => {
+    if (!isInspectMode || (currentMode !== 'crop' && currentMode !== 'capture') || !isAreaMouseDown) return;
+    e.preventDefault();
+    e.stopPropagation();
+    isAreaMouseDown = false;
+
+    const endX = e.clientX;
+    const endY = e.clientY;
+    const rect = {
+      left: Math.min(cropStartX, endX),
+      top: Math.min(cropStartY, endY),
+      width: Math.abs(endX - cropStartX),
+      height: Math.abs(endY - cropStartY)
+    };
+
+    cropBox.style.display = 'none';
+
+    if (rect.width < 12 || rect.height < 12) {
+      return;
+    }
+
+    const centerEl = document.elementFromPoint(rect.left + rect.width / 2, rect.top + rect.height / 2);
+    const selector = centerEl ? getSelector(centerEl) : 'Screen Area';
+    const component = centerEl ? getComponentName(centerEl) : '';
+
+    if (currentMode === 'crop') {
+      stopInspect();
+      capturedBlob = null;
+      capturedBase64 = null;
+      capturedData = {
+        isImage: false,
+        type: 'ครอบพื้นที่ (Area Selection)',
+        component: component,
+        selector: selector,
+        preview: `พิกัดพื้นที่: ${Math.round(rect.width)}x${Math.round(rect.height)} px (${centerEl ? centerEl.tagName.toLowerCase() : 'element'})`
+      };
+      openModal();
+
+    } else if (currentMode === 'capture') {
+      stopInspect();
+      showToast('กำลังประมวลผลภาพ...');
+
+      const cteEls = document.querySelectorAll('.cte-ui');
+      cteEls.forEach(el => el.style.visibility = 'hidden');
+
+      try {
+        if (typeof html2canvas === 'undefined') {
+          throw new Error('html2canvas not loaded');
+        }
+
+        const scrollX = window.scrollX || window.pageXOffset || 0;
+        const scrollY = window.scrollY || window.pageYOffset || 0;
+
+        const canvas = await html2canvas(document.body, {
+          x: rect.left + scrollX,
+          y: rect.top + scrollY,
+          width: rect.width,
+          height: rect.height,
+          windowWidth: window.innerWidth,
+          windowHeight: window.innerHeight,
+          useCORS: true,
+          logging: false,
+          onclone: (clonedDoc) => {
+            try {
+              // 1. Sanitize style tags (Tailwind v4 oklch/oklab/color-mix)
+              const styles = clonedDoc.querySelectorAll('style');
+              styles.forEach(s => {
+                if (s.textContent && /(oklab|oklch|color-mix|\blab\(|\blch\()/.test(s.textContent)) {
+                  s.textContent = sanitizeCssColors(s.textContent);
+                }
+              });
+              // 2. Sanitize CSSStyleSheets rules
+              try {
+                for (let i = 0; i < clonedDoc.styleSheets.length; i++) {
+                  const sheet = clonedDoc.styleSheets[i];
+                  try {
+                    const rules = sheet.cssRules || sheet.rules;
+                    if (rules) {
+                      for (let r = 0; r < rules.length; r++) {
+                        const rule = rules[r];
+                        if (rule.cssText && /(oklab|oklch|color-mix|\blab\(|\blch\()/.test(rule.cssText)) {
+                          const sanitized = sanitizeCssColors(rule.cssText);
+                          sheet.deleteRule(r);
+                          sheet.insertRule(sanitized, r);
+                        }
+                      }
+                    }
+                  } catch(e) {}
+                }
+              } catch(e) {}
+              // 3. Sanitize inline element styles
+              const all = clonedDoc.querySelectorAll('*');
+              all.forEach(el => {
+                if (el.style) {
+                  ['color', 'backgroundColor', 'borderColor', 'outlineColor', 'fill', 'stroke'].forEach(prop => {
+                    const val = el.style[prop];
+                    if (val && /(oklab|oklch|color-mix|\blab\(|\blch\()/.test(val)) {
+                      el.style[prop] = '';
+                    }
+                  });
+                }
+              });
+            } catch(e) {}
+          }
+        });
+
+        cteEls.forEach(el => el.style.visibility = '');
+
+        capturedBase64 = canvas.toDataURL('image/png');
+
+        await new Promise(resolve => {
+          canvas.toBlob((blob) => {
+            capturedBlob = blob;
+            resolve();
+          }, 'image/png');
+        });
+
+        capturedData = {
+          isImage: true,
+          type: 'ภาพหน้าจอ (Screenshot)',
+          component: component,
+          selector: selector,
+          preview: `ขนาด ${Math.round(rect.width)}x${Math.round(rect.height)} px`
+        };
+
+        openModal();
+
+      } catch(err) {
+        cteEls.forEach(el => el.style.visibility = '');
+        console.error('Screenshot error:', err);
+        showToast('ไม่สามารถเรนเดอร์ภาพได้ แต่บันทึกพิกัดพื้นที่ให้แล้ว');
+        capturedData = {
+          isImage: false,
+          type: 'ครอบพื้นที่ (Area Selection)',
+          component: component,
+          selector: selector,
+          preview: `พิกัดพื้นที่: ${Math.round(rect.width)}x${Math.round(rect.height)} px (${centerEl ? centerEl.tagName.toLowerCase() : 'element'})`
+        };
+        openModal();
+      }
+    }
+
+  }, true);
+
+  // --- CLICK SELECT (MULTI-POINT SUPPORT) ---
+  window.addEventListener('click', (e) => {
+    if (!isInspectMode || currentMode !== 'click') return;
+    if (e.target.closest('.cte-ui')) return;
+
+    e.preventDefault();
+    e.stopPropagation();
+
+    const el = e.target;
+    toggleSelectElement(el);
+  }, true);
+
+  function openModal() {
+    if (!capturedData) return;
+
+    if (capturedData.isImage) {
+      modalHeading.textContent = 'ภาพที่แคปได้และคำสั่งแก้ไข';
+      submitBtnText.textContent = 'คัดลอกรูปภาพและคำสั่ง';
+      metaBox.style.display = 'none';
+      if (multiTargetsWrap) multiTargetsWrap.style.display = 'none';
+      imagePreviewWrap.style.display = 'flex';
+      imagePreview.src = capturedBase64;
+    } else if (capturedData.isMulti) {
+      modalHeading.textContent = `ระบุคำสั่งแก้ไขสำหรับ ${capturedData.items.length} จุดที่เลือกพร้อมกัน`;
+      submitBtnText.textContent = 'บันทึกและคัดลอกคำสั่ง';
+      metaBox.style.display = 'none';
+      imagePreviewWrap.style.display = 'none';
+      if (multiTargetsWrap) {
+        multiTargetsWrap.style.display = 'flex';
+        multiTargetsWrap.innerHTML = capturedData.items.map(it => `
+          <div class="cte-multi-target-item cte-ui">
+            <span class="cte-multi-target-idx cte-ui">${it.index}</span>
+            <div class="cte-multi-target-content cte-ui">
+              <div class="cte-multi-target-tag cte-ui">&lt;${it.type}&gt;${it.component ? ` [${it.component}]` : ''} ${it.selector}</div>
+              <div class="cte-multi-target-preview cte-ui">${it.preview ? `"${it.preview}"` : '(ไม่มีข้อความ)'}</div>
+            </div>
+          </div>
+        `).join('');
+      }
+    } else {
+      modalHeading.textContent = 'ระบุคำสั่งแก้ไขสำหรับจุดนี้';
+      submitBtnText.textContent = 'บันทึกและคัดลอกคำสั่ง';
+      metaBox.style.display = 'block';
+      if (multiTargetsWrap) multiTargetsWrap.style.display = 'none';
+      imagePreviewWrap.style.display = 'none';
+      targetTypeEl.textContent = capturedData.component
+        ? `${capturedData.type} (${capturedData.component})`
+        : capturedData.type;
+      targetSelectorEl.textContent = capturedData.selector;
+      targetPreviewEl.textContent = capturedData.preview;
+    }
+
+    instructionInput.value = '';
+    modalBackdrop.classList.add('show');
+    setTimeout(() => instructionInput.focus(), 60);
+  }
+
+  function closeModal() {
+    modalBackdrop.classList.remove('show');
+    clearMultiBoxes();
+  }
+
+  modalCloseBtn.addEventListener('click', closeModal);
+  modalCancelBtn.addEventListener('click', closeModal);
+
+  // --- ANNOTATION / DRAWING EDITOR LOGIC ---
+  imagePreviewWrap.addEventListener('click', () => {
+    if (!capturedBase64) return;
+    const img = new Image();
+    img.onload = () => {
+      annotCanvas.width = img.naturalWidth || img.width;
+      annotCanvas.height = img.naturalHeight || img.height;
+      annotCtx.clearRect(0, 0, annotCanvas.width, annotCanvas.height);
+      annotCtx.drawImage(img, 0, 0);
+      undoStack = [annotCtx.getImageData(0, 0, annotCanvas.width, annotCanvas.height)];
+      annotModalBackdrop.classList.add('show');
+    };
+    img.src = capturedBase64;
+  });
+
+  colorBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      colorBtns.forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      drawColor = btn.getAttribute('data-color');
+    });
+  });
+
+  sizeBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      sizeBtns.forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      drawSize = parseInt(btn.getAttribute('data-size'), 10) || 4;
+    });
+  });
+
+  function getCanvasPos(e) {
+    const rect = annotCanvas.getBoundingClientRect();
+    const scaleX = annotCanvas.width / rect.width;
+    const scaleY = annotCanvas.height / rect.height;
+    return {
+      x: (e.clientX - rect.left) * scaleX,
+      y: (e.clientY - rect.top) * scaleY
+    };
+  }
+
+  annotCanvas.addEventListener('pointerdown', (e) => {
+    if (e.button !== 0) return;
+    isDrawing = true;
+    const pos = getCanvasPos(e);
+    lastDrawX = pos.x;
+    lastDrawY = pos.y;
+
+    if (undoStack.length >= maxUndo) undoStack.shift();
+    undoStack.push(annotCtx.getImageData(0, 0, annotCanvas.width, annotCanvas.height));
+
+    annotCtx.beginPath();
+    annotCtx.arc(lastDrawX, lastDrawY, drawSize / 2, 0, Math.PI * 2);
+    annotCtx.fillStyle = drawColor;
+    annotCtx.fill();
+
+    annotCanvas.setPointerCapture(e.pointerId);
+  });
+
+  annotCanvas.addEventListener('pointermove', (e) => {
+    if (!isDrawing) return;
+    const pos = getCanvasPos(e);
+
+    annotCtx.beginPath();
+    annotCtx.moveTo(lastDrawX, lastDrawY);
+    annotCtx.lineTo(pos.x, pos.y);
+    annotCtx.strokeStyle = drawColor;
+    annotCtx.lineWidth = drawSize;
+    annotCtx.lineCap = 'round';
+    annotCtx.lineJoin = 'round';
+    annotCtx.stroke();
+
+    lastDrawX = pos.x;
+    lastDrawY = pos.y;
+  });
+
+  annotCanvas.addEventListener('pointerup', (e) => {
+    if (!isDrawing) return;
+    isDrawing = false;
+    try { annotCanvas.releasePointerCapture(e.pointerId); } catch(err) {}
+  });
+
+  annotUndoBtn.addEventListener('click', () => {
+    if (undoStack.length > 1) {
+      const prev = undoStack.pop();
+      annotCtx.putImageData(prev, 0, 0);
+    }
+  });
+
+  annotClearBtn.addEventListener('click', () => {
+    if (undoStack.length > 0) {
+      const initial = undoStack[0];
+      undoStack = [initial];
+      annotCtx.putImageData(initial, 0, 0);
+    }
+  });
+
+  annotCancelBtn.addEventListener('click', () => {
+    annotModalBackdrop.classList.remove('show');
+  });
+
+  annotCloseBtn.addEventListener('click', () => {
+    annotModalBackdrop.classList.remove('show');
+  });
+
+  annotSaveBtn.addEventListener('click', () => {
+    capturedBase64 = annotCanvas.toDataURL('image/png');
+    annotCanvas.toBlob((blob) => {
+      capturedBlob = blob;
+    }, 'image/png');
+    imagePreview.src = capturedBase64;
+    annotModalBackdrop.classList.remove('show');
+    showToast('บันทึกรูปวาดบนภาพเรียบร้อยแล้ว');
+  });
+
+  function buildPrompt(instruction) {
+    if (capturedData && capturedData.isImage) {
+      return `[คำสั่งแก้ไข UI จากภาพหน้าจอ]
+- ตำแหน่งโดยประมาณ: ${capturedData.selector}${capturedData.component ? ` [${capturedData.component}]` : ''}
+- รายละเอียดภาพ: ${capturedData.preview}
+- สิ่งที่ต้องการให้แก้ไข: ${instruction || '(ดูรายละเอียดตามภาพที่แนบ)'}`;
+    } else if (capturedData && capturedData.isMulti) {
+      const itemsList = capturedData.items.map(it => `  จุดที่ ${it.index}: <${it.type}>${it.component ? ` [${it.component}]` : ''} (${it.selector})\n     ข้อความเดิม: "${it.preview}"`).join('\n');
+      return `[คำสั่งแก้ไข UI - เลือกทั้งหมด ${capturedData.items.length} จุดพร้อมกัน]
+ตำแหน่งและชิ้นส่วนที่เลือก:
+${itemsList}
+
+สิ่งที่ต้องการให้แก้ไข:
+${instruction}`;
+    } else if (capturedData) {
+      return `[คำสั่งแก้ไข UI จากหน้าเว็บ]
+- ตำแหน่ง: ${capturedData.selector}${capturedData.component ? `\n- Component: ${capturedData.component}` : ''}
+- ชิ้นส่วน: ${capturedData.type}
+- ข้อความเดิม: ${capturedData.preview}
+- สิ่งที่ต้องการแก้ไข: ${instruction}`;
+    }
+    return instruction;
+  }
+
+  // Main Submit Button: Copy Image AND Text
+  modalSendBtn.addEventListener('click', async () => {
+    const instruction = instructionInput.value.trim();
+    const formattedPrompt = buildPrompt(instruction);
+
+    if (capturedData.isImage) {
+      // 1. Send image and instruction to server endpoint (or sidecar fallback)
+      await postToCteServer('/api/screenshot', {
+        image: capturedBase64,
+        instruction: instruction,
+        selector: capturedData.selector,
+        component: capturedData.component || '',
+        timestamp: new Date().toISOString()
+      });
+
+      // 2. Write BOTH image/png AND text/plain to ClipboardItem
+      let copiedSuccess = false;
+      try {
+        if (capturedBlob && navigator.clipboard && navigator.clipboard.write && window.ClipboardItem) {
+          const clipboardData = {};
+          clipboardData['image/png'] = capturedBlob;
+          clipboardData['text/plain'] = new Blob([formattedPrompt], { type: 'text/plain' });
+          await navigator.clipboard.write([new ClipboardItem(clipboardData)]);
+          copiedSuccess = true;
+        }
+      } catch(err) {
+        copiedSuccess = await copyTextFallback(formattedPrompt);
+      }
+
+      if (!copiedSuccess) {
+        await copyTextFallback(formattedPrompt);
+      }
+
+      closeModal();
+      showToast('บันทึกภาพและคำสั่งแล้ว กด Ctrl+V ในแชทได้ทันที');
+
+    } else {
+      if (!instruction) {
+        instructionInput.focus();
+        return;
+      }
+
+      const payload = {
+        timestamp: new Date().toISOString(),
+        isMulti: Boolean(capturedData.isMulti),
+        items: capturedData.items || null,
+        type: capturedData.type,
+        component: capturedData.component || '',
+        selector: capturedData.selector,
+        preview: capturedData.preview,
+        instruction: instruction
+      };
+
+      await copyTextFallback(formattedPrompt);
+      await postToCteServer('/api/edit-request', payload);
+
+      closeModal();
+      showToast('คัดลอกคำสั่งเรียบร้อยแล้ว กด Ctrl+V ในแชทได้ทันที');
+    }
+  });
+
+})();
+</script>

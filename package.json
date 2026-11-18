@@ -1,0 +1,46 @@
+{
+  "name": "click-to-edit",
+  "version": "1.0.0",
+  "description": "Universal Click-to-Edit, Multi-Element Inspector, Screen Capture & Annotation Debug Tool for AI-Assisted UI Development",
+  "main": "./index.js",
+  "bin": {
+    "cte": "./bin/cli.js",
+    "click-to-edit": "./bin/cli.js"
+  },
+  "exports": {
+    ".": "./index.js",
+    "./vite": {
+      "import": "./server/vite-plugin.mjs",
+      "require": "./server/vite-plugin.js",
+      "default": "./server/vite-plugin.js"
+    },
+    "./middleware": "./server/middleware.js"
+  },
+  "files": [
+    "bin/",
+    "client/",
+    "dist/",
+    "server/",
+    "scripts/",
+    "index.js",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "node scripts/build-bundle.js",
+    "prepare": "node scripts/build-bundle.js",
+    "test": "node tests/test-cli.js"
+  },
+  "keywords": [
+    "debug",
+    "ui-inspector",
+    "click-to-edit",
+    "screenshot",
+    "annotation",
+    "vite-plugin",
+    "cli"
+  ],
+  "license": "MIT",
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
