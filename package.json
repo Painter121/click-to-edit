@@ -39,6 +39,10 @@
     "vite-plugin",
     "cli"
   ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Painter121/click-to-edit.git"
+  },
   "license": "MIT",
   "engines": {
     "node": ">=18.0.0"

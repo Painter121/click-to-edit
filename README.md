@@ -48,7 +48,7 @@ cte init ./path/to/project
 ### 2) รันตรงจาก GitHub ด้วย `npx` (ไม่ต้องติดตั้งล่วงหน้า)
 
 ```bash
-npx github:<ชื่อ-user>/click-to-edit init
+npx github:Painter121/click-to-edit init
 ```
 
 ### 3) ถอนการติดตั้งออกจากโปรเจ็กต์
@@ -76,7 +76,7 @@ cte sidecar --port 4899
 
 ```bash
 git branch -M main
-git remote add origin https://github.com/<ชื่อ-user>/click-to-edit.git
+git remote add origin https://github.com/Painter121/click-to-edit.git
 git push -u origin main
 ```
 
@@ -84,10 +84,10 @@ git push -u origin main
 
 ```bash
 # ติดตั้งเข้าโปรเจ็กต์ด้วยคำสั่งเดียว
-npx github:<ชื่อ-user>/click-to-edit init
+npx github:Painter121/click-to-edit init
 
 # หรือติดตั้งเป็น devDependency สำหรับใช้ Vite Plugin โดยตรง
-npm install -D github:<ชื่อ-user>/click-to-edit
+npm install -D github:Painter121/click-to-edit
 ```
 
 หากติดตั้งแบบ `devDependency` สามารถเรียกใช้ใน `vite.config.js` ได้ดังนี้:
