@@ -28,7 +28,6 @@
   ],
   "scripts": {
     "build": "node scripts/build-bundle.js",
-    "prepare": "node scripts/build-bundle.js",
     "test": "node tests/test-cli.js"
   },
   "keywords": [

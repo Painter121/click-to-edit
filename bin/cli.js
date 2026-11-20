@@ -9,6 +9,7 @@ const PACKAGE_ROOT = path.resolve(__dirname, '..');
 const DIST_BUNDLE_PATH = path.join(PACKAGE_ROOT, 'dist', 'click-to-edit.bundle.js');
 const CLIENT_HTML_PATH = path.join(PACKAGE_ROOT, 'client', 'click-to-edit.html');
 const HTML2CANVAS_PATH = path.join(PACKAGE_ROOT, 'client', 'html2canvas.min.js');
+const SKILL_SOURCE_PATH = path.join(PACKAGE_ROOT, '.agent', 'skills', 'ui-standard', 'SKILL.md');
 
 const CTE_SCRIPT_MARKER = 'click-to-edit.bundle.js';
 const CTE_PLUGIN_FILE_ESM = 'cte-vite-plugin.mjs';
@@ -434,6 +435,16 @@ function detectIsEsm(viteRoot, configPath) {
   return false;
 }
 
+function installUiStandardSkill(targetDir) {
+  if (!fs.existsSync(SKILL_SOURCE_PATH)) return false;
+  const destDir = path.join(targetDir, '.agent', 'skills', 'ui-standard');
+  const destFile = path.join(destDir, 'SKILL.md');
+  if (fs.existsSync(destFile)) return false;
+  fs.mkdirSync(destDir, { recursive: true });
+  fs.copyFileSync(SKILL_SOURCE_PATH, destFile);
+  return true;
+}
+
 function runInit(targetArg) {
   ensureDistBuilt();
   const targetDir = path.resolve(targetArg || process.cwd());
@@ -443,6 +454,7 @@ function runInit(targetArg) {
   }
 
   console.log(`\n[Click-to-Edit] กำลังตรวจสอบโปรเจ็กต์ที่: ${targetDir}`);
+  const skillInstalled = installUiStandardSkill(targetDir);
 
   // 1. Vite Project Detection
   const viteInfo = findViteRoot(targetDir);
@@ -473,6 +485,9 @@ function runInit(targetArg) {
       console.log(`   - อัปเดตไฟล์ bundle แล้ว (${viteInfo.configName} มี plugin อยู่แล้ว)`);
     } else {
       console.log(`   ⚠️ กรุณาเพิ่ม clickToEdit() ใน plugins ของ ${viteInfo.configName} ด้วยตนเอง`);
+    }
+    if (skillInstalled) {
+      console.log(`   - ติดตั้ง Agent Skill: .agent/skills/ui-standard/SKILL.md`);
     }
     if (gitignores.length > 0) {
       console.log(`   - อัปเดต .gitignore สำหรับ mock/last_screenshot.png และ mock/last_edit_request.json`);
