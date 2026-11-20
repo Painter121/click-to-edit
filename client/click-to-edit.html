@@ -501,32 +501,6 @@
     border-color: #2563eb;
     box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
   }
-  .cte-standard-row {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    margin-top: 8px;
-    padding: 7px 10px;
-    background: #f8fafc;
-    border: 1px solid #e2e8f0;
-    border-radius: 6px;
-    font-size: 12px;
-    color: #334155;
-    cursor: pointer;
-    user-select: none;
-    transition: border-color 0.15s, background 0.15s;
-  }
-  .cte-standard-row:hover {
-    border-color: #cbd5e1;
-    background: #f1f5f9;
-  }
-  .cte-standard-checkbox {
-    width: 14px;
-    height: 14px;
-    accent-color: #2563eb;
-    cursor: pointer;
-    margin: 0;
-  }
 
   .cte-modal-footer {
     display: flex;
@@ -793,11 +767,7 @@
           <span class="cte-meta-value cte-ui" id="cte-target-preview">-</span>
         </div>
       </div>
-      <textarea id="cte-instruction-input" class="cte-textarea cte-ui" placeholder="ระบุสิ่งที่ต้องการปรับปรุง เช่น ปรับขนาดฟอนต์, เปลี่ยนข้อความ, จัดแนว, เปลี่ยนสี ฯลฯ (กด Enter เพื่อส่งคำสั่ง, Shift+Enter เพื่อขึ้นบรรทัดใหม่)"></textarea>
-      <label class="cte-standard-row cte-ui" for="cte-standard-mode-checkbox">
-        <input type="checkbox" id="cte-standard-mode-checkbox" class="cte-standard-checkbox cte-ui" />
-        <span class="cte-ui">มาตรฐาน Paint (ส่งได้เลยไม่ต้องพิมพ์)</span>
-      </label>
+      <textarea id="cte-instruction-input" class="cte-textarea cte-ui" placeholder="ระบุสิ่งที่ต้องการปรับปรุง หรือเว้นว่างแล้วกด Enter เพื่อใช้มาตรฐาน Paint อัตโนมัติ (Shift+Enter เพื่อขึ้นบรรทัดใหม่)"></textarea>
     </div>
     <div class="cte-modal-footer cte-ui">
       <button type="button" class="cte-btn-cancel cte-ui" id="cte-modal-cancel">ยกเลิก</button>
@@ -886,16 +856,6 @@
   const modalHeading = document.getElementById('cte-modal-heading');
   const submitBtnText = document.getElementById('cte-submit-btn-text');
   const instructionInput = document.getElementById('cte-instruction-input');
-  const standardModeCheckbox = document.getElementById('cte-standard-mode-checkbox');
-  try {
-    const savedStd = localStorage.getItem('cte_ui_standard_mode');
-    if (standardModeCheckbox) {
-      standardModeCheckbox.checked = savedStd === null ? true : savedStd === 'true';
-      standardModeCheckbox.addEventListener('change', () => {
-        try { localStorage.setItem('cte_ui_standard_mode', String(standardModeCheckbox.checked)); } catch (e) {}
-      });
-    }
-  } catch (e) {}
 
   const CLEAN_UI_BASELINE = 'คุมมาตรฐานหน้าเว็บให้คลีน (Clean UI / Anti-AI-Slop): ใช้สีสะอาดตา contrast ชัดเจน, เลี่ยง gradient ฉูดฉาดหรือเงาหนาเกินจำเป็น, จัดฟอนต์และระยะห่างให้สม่ำเสมอ';
 
@@ -1982,17 +1942,10 @@
   });
 
   function buildPrompt(instruction) {
-    const useStandard = Boolean(standardModeCheckbox && standardModeCheckbox.checked);
-
     if (capturedData && capturedData.isImage) {
-      let actionText = instruction;
-      if (!actionText && useStandard) {
-        actionText = `\n  - ${getRoleRuleText(capturedData.role || 'general')}\n  - ${CLEAN_UI_BASELINE}`;
-      } else if (!actionText) {
-        actionText = '(ดูรายละเอียดตามภาพที่แนบ)';
-      } else if (useStandard) {
-        actionText = `${instruction}\n- มาตรฐาน UI เพิ่มเติม: ${CLEAN_UI_BASELINE}`;
-      }
+      const actionText = instruction
+        ? instruction
+        : `[มาตรฐาน Paint]\n  - ${getRoleRuleText(capturedData.role || 'general')}\n  - ${CLEAN_UI_BASELINE}`;
       return `[คำสั่งแก้ไข UI จากภาพหน้าจอ]
 - ตำแหน่งโดยประมาณ: ${capturedData.selector}${capturedData.component ? ` [${capturedData.component}]` : ''}
 - รายละเอียดภาพ: ${capturedData.preview}
@@ -2000,13 +1953,9 @@
     } else if (capturedData && capturedData.isMulti) {
       const itemsList = capturedData.items.map(it => `  จุดที่ ${it.index}: <${it.type}>${it.component ? ` [${it.component}]` : ''} (${it.selector})\n     ข้อความเดิม: "${it.preview}"`).join('\n');
       let actionBlock = instruction;
-      if (!actionBlock && useStandard) {
+      if (!actionBlock) {
         const perItemRules = capturedData.items.map(it => `  - จุดที่ ${it.index} (${getRoleLabel(it.role)}): ${getRoleRuleText(it.role)}`).join('\n');
-        actionBlock = `[Auto-Standard ตามประเภทชิ้นส่วน]\n${perItemRules}\n  - ภาพรวม: ${CLEAN_UI_BASELINE}`;
-      } else if (useStandard) {
-        const uniqueRoles = [...new Set(capturedData.items.map(it => it.role || 'general'))];
-        const roleRules = uniqueRoles.map(r => `  - ${getRoleLabel(r)}: ${getRoleRuleText(r)}`).join('\n');
-        actionBlock = `${instruction}\n\nมาตรฐาน UI เพิ่มเติม:\n${roleRules}\n  - ภาพรวม: ${CLEAN_UI_BASELINE}`;
+        actionBlock = `[มาตรฐาน Paint ตามประเภทชิ้นส่วน]\n${perItemRules}\n  - ภาพรวม: ${CLEAN_UI_BASELINE}`;
       }
       return `[คำสั่งแก้ไข UI - เลือกทั้งหมด ${capturedData.items.length} จุดพร้อมกัน]
 ตำแหน่งและชิ้นส่วนที่เลือก:
@@ -2016,12 +1965,9 @@ ${itemsList}
 ${actionBlock}`;
     } else if (capturedData) {
       const role = capturedData.role || 'general';
-      let actionText = instruction;
-      if (!actionText && useStandard) {
-        actionText = `[Auto-Standard: ${getRoleLabel(role)}]\n  - ${getRoleRuleText(role)}\n  - ${CLEAN_UI_BASELINE}`;
-      } else if (useStandard) {
-        actionText = `${instruction}\n- มาตรฐาน UI เพิ่มเติม (${getRoleLabel(role)}): ${getRoleRuleText(role)} | ${CLEAN_UI_BASELINE}`;
-      }
+      const actionText = instruction
+        ? instruction
+        : `[มาตรฐาน Paint: ${getRoleLabel(role)}]\n  - ${getRoleRuleText(role)}\n  - ${CLEAN_UI_BASELINE}`;
       return `[คำสั่งแก้ไข UI จากหน้าเว็บ]
 - ตำแหน่ง: ${capturedData.selector}${capturedData.component ? `\n- Component: ${capturedData.component}` : ''}
 - ชิ้นส่วน: ${capturedData.type}
@@ -2033,7 +1979,6 @@ ${actionBlock}`;
 
   // Main Submit Button: Copy Image AND Text
   modalSendBtn.addEventListener('click', async () => {
-    const useStandard = Boolean(standardModeCheckbox && standardModeCheckbox.checked);
     const instruction = instructionInput.value.trim();
     const formattedPrompt = buildPrompt(instruction);
 
@@ -2041,7 +1986,7 @@ ${actionBlock}`;
       // 1. Send image and instruction to server endpoint (or sidecar fallback)
       await postToCteServer('/api/screenshot', {
         image: capturedBase64,
-        instruction: instruction || (useStandard ? '[Auto-Standard]' : ''),
+        instruction: instruction || '[มาตรฐาน Paint]',
         selector: capturedData.selector,
         component: capturedData.component || '',
         timestamp: new Date().toISOString()
@@ -2069,11 +2014,6 @@ ${actionBlock}`;
       showToast('บันทึกภาพและคำสั่งแล้ว กด Ctrl+V ในแชทได้ทันที');
 
     } else {
-      if (!instruction && !useStandard) {
-        instructionInput.focus();
-        return;
-      }
-
       const payload = {
         timestamp: new Date().toISOString(),
         isMulti: Boolean(capturedData.isMulti),
@@ -2082,7 +2022,7 @@ ${actionBlock}`;
         component: capturedData.component || '',
         selector: capturedData.selector,
         preview: capturedData.preview,
-        instruction: instruction || '[Auto-Standard]'
+        instruction: instruction || '[มาตรฐาน Paint]'
       };
 
       await copyTextFallback(formattedPrompt);
