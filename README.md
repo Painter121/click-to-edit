@@ -14,6 +14,7 @@
 - **ปลอดภัยใน Production:** สคริปต์จะเปิดใช้งานเฉพาะบน `localhost`, `127.0.0.1`, LAN IP (`192.168.*`, `10.*`) หรือ `file://` เท่านั้น
 - **ตรวจจับชื่อ React / Vue Component อัตโนมัติ:** แสดงชื่อ Component (เช่น `[BottomNav]`) ให้ใน Highlight Badge และ Prompt
 - **รองรับ Tailwind CSS v4 (`oklch` / `oklab` / `color-mix`):** แปลงค่าสีก่อนแคปภาพด้วย `html2canvas`
+- **โหมดมาตรฐาน UI ส่วนตัว (Auto-Standard):** ติ๊กเปิดใน Popup เพื่อส่งคำสั่งได้ทันทีโดยไม่ต้องพิมพ์ ระบบจะตรวจจับประเภท Element (เช่น สถานะ = จุดสีด้านหน้า, ปุ่ม = ไม่ซ้อนบรรทัด + ขอบไม่มนเกิน, ภาพรวม = Clean UI) และสร้าง Prompt ให้อัตโนมัติ พร้อมไฟล์ Skill ใน [SKILL.md](.agent/skills/ui-standard/SKILL.md)
 
 ---
 

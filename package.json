@@ -17,6 +17,7 @@
     "./middleware": "./server/middleware.js"
   },
   "files": [
+    ".agent/",
     "bin/",
     "client/",
     "dist/",
