@@ -3,8 +3,8 @@
 <style class="cte-ui">
   #cte-container {
     position: fixed;
-    bottom: 24px;
-    left: 24px;
+    top: calc(50% - 21px);
+    right: 12px;
     z-index: 9999999;
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
     user-select: none;
@@ -1722,15 +1722,34 @@
       targetPreviewEl.textContent = capturedData.preview;
     }
 
-    instructionInput.value = '';
+    instructionInput.value = sessionStorage.getItem('cte_draft_instruction') || '';
     modalBackdrop.classList.add('show');
     setTimeout(() => instructionInput.focus(), 60);
   }
 
+  instructionInput.addEventListener('input', () => {
+    try { sessionStorage.setItem('cte_draft_instruction', instructionInput.value); } catch (e) {}
+  });
+
   function closeModal() {
     modalBackdrop.classList.remove('show');
     clearMultiBoxes();
+    try { sessionStorage.removeItem('cte_draft_instruction'); } catch (e) {}
+    if (window.__ctePendingReload) {
+      window.__ctePendingReload = false;
+      setTimeout(() => location.reload(), 650);
+    }
   }
+
+  window.__cteShouldDeferReload = () =>
+    modalBackdrop.classList.contains('show') ||
+    annotModalBackdrop.classList.contains('show') ||
+    isInspectMode ||
+    isCropMode;
+
+  window.__cteNotifyPendingReload = () => {
+    showToast('โค้ดอัปเดตแล้ว — พักการรีเฟรชไว้จนกว่าจะปิดหน้าต่างนี้');
+  };
 
   modalCloseBtn.addEventListener('click', closeModal);
   modalCancelBtn.addEventListener('click', closeModal);
